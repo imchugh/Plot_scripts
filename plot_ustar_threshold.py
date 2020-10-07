@@ -23,9 +23,9 @@ def plot_ustar(path_to_file, num_cats = 30, vars_dict = None,
     Kwargs:
         * num_cats (int) - number of categories to split ustar into
         * vars_dict (dict) - dictionary containing mapping of variables to
-          dataset-specific variable names (see _define_default_external_names()
+          dataset-specific variable names (see _define_default_internal_names()
           function below for key names); if not user-specified, default names
-          will be used, but will fail if these names are not used in the data
+          will be used, but will fail if these names do not appear in the data
         * ustar_threshold (float) - can be used to impose a vertical line at
           the approximate threshold defined by user; not used by default
         * light_threshold (int or float) - light level used to define day /
@@ -76,21 +76,31 @@ def _define_default_internal_names():
 #------------------------------------------------------------------------------
 def _make_df(path_to_file, external_names):
 
+    # Open the data
     ds = xr.open_dataset(path_to_file)
     ds = ds.sel(latitude=ds.latitude[0], longitude=ds.longitude[0], drop=True)
+    df = ds.to_dataframe()
+    ds.close()
+    df.index = df.index.drop_duplicates()
+    df.replace(to_replace=-9999, value=np.nan, inplace=True)
+
+    # Do naming conversions
+    # If no external names supplied, use defaults
+    if not external_names:
+        subset_list = list(_define_default_internal_names().values())
+        if not 'Fc_storage' in df.columns: subset_list.remove('Fc_storage')
+        assert all([x in df.columns for x in subset_list])
+        return df[subset_list]
+
+    # If external names, map to internal names and rename
     temp_names = _define_default_internal_names()
     assert all([x in temp_names for x in external_names])
     temp_names.update(external_names)
     if not temp_names['storage_name'] in ds.variables:
         temp_names.pop('storage_name')
     assert all([temp_names[x] in ds.variables for x in temp_names.keys()])
-    ds = ds[list(temp_names.values())]
     internal_names = _define_default_internal_names()
     swap_dict = {temp_names[key]: internal_names[key]
                  for key in temp_names.keys()}
-    df = ds.to_dataframe()
-    df.index = df.index.drop_duplicates()
-    df.replace(to_replace=-9999, value=np.nan, inplace=True)
-    ds.close()
-    return df.rename(swap_dict, axis=1)
+    return df[temp_names.values()].rename(swap_dict, axis=1)
 #------------------------------------------------------------------------------
