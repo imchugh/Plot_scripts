@@ -36,10 +36,11 @@ def plot_ustar(path_to_file, num_cats = 30, vars_dict = None,
     df = _make_df(path_to_file, vars_dict)
 
     # Group by quantile and generate mean
-    noct_df = df.loc[df.Fsd < light_threshold]
+    noct_df = df.loc[df.Fsd < light_threshold].copy()
+    noct_df.drop('Fsd', axis=1, inplace=True)
     noct_df['ustar_cat'] = pd.qcut(df.ustar, num_cats,
                                    labels = np.linspace(1, num_cats, num_cats))
-    means_df = noct_df.groupby('ustar_cat').mean()
+    means_df = noct_df.dropna().groupby('ustar_cat').mean()
 
     # Plot
     fig, ax = plt.subplots(1, figsize = (12, 8))
@@ -52,14 +53,15 @@ def plot_ustar(path_to_file, num_cats = 30, vars_dict = None,
     ax.xaxis.set_ticks_position('bottom')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    if ustar_threshold: ax.axvline(ustar_threshold, color = 'grey')
-    ax.plot(means_df.ustar, means_df.Fc, marker = 'o', mfc = 'None',
-            color = 'black', ls=':')
+    if ustar_threshold: ax.axvline(ustar_threshold, color='black', lw=0.5)
+    ax.plot(means_df.ustar, means_df.Fc, marker='o', mfc='None',
+            color = 'black', ls=':', label='Turbulent flux')
     if 'Fc_storage' in noct_df.columns:
-        ax.plot(means_df.ustar, means_df.Fc_storage, marker = 's', mfc = 'None',
-                color = 'black', ls='-.')
+        ax.plot(means_df.ustar, means_df.Fc_storage, marker='s', mfc='None',
+                color = 'black', ls='-.', label='Storage')
         ax.plot(means_df.ustar, means_df.Fc + means_df.Fc_storage,
-                marker = '^', mfc = '0.5', color = '0.5')
+                marker = '^', mfc = '0.5', color = '0.5', label='Apparent NEE')
+        ax.legend(frameon=False)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
