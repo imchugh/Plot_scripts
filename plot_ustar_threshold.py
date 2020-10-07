@@ -33,19 +33,10 @@ def plot_ustar(path_to_file, num_cats = 30, vars_dict = None,
     """
 
     # Open, dump data into ds and convert to df
-    ds = xr.open_dataset(path_to_file)
-    df = ds.to_dataframe()
-    df.index = df.index.drop_duplicates()
-    df.replace(to_replace=-9999, value=np.nan, inplace=True)
-    ds.close()
-
-    # Dump extraneous variables and swap keys to internal names
-    if not vars_dict: vars_dict = _define_default_internal_names()
-    df = df[vars_dict.values()]
-    if vars_dict: _rename_df(df, vars_dict, _define_default_internal_names())
+    df = _make_df(path_to_file, vars_dict)
 
     # Group by quantile and generate mean
-    noct_df = df.loc[df[vars_dict['insolation_name']] < light_threshold]
+    noct_df = df.loc[df.Fsd < light_threshold]
     noct_df['ustar_cat'] = pd.qcut(df.ustar, num_cats,
                                    labels = np.linspace(1, num_cats, num_cats))
     means_df = noct_df.groupby('ustar_cat').mean()
@@ -62,25 +53,42 @@ def plot_ustar(path_to_file, num_cats = 30, vars_dict = None,
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     if ustar_threshold: ax.axvline(ustar_threshold, color = 'grey')
-    ax.plot(means_df[vars_dict['friction_velocity_name']],
-            means_df[vars_dict['flux_name']],
-            marker = 'o', mfc = '0.5', color = 'grey')
+    ax.plot(means_df.ustar, means_df.Fc, marker = 'o', mfc = 'None',
+            color = 'black', ls=':')
+    if 'Fc_storage' in noct_df.columns:
+        ax.plot(means_df.ustar, means_df.Fc_storage, marker = 's', mfc = 'None',
+                color = 'black', ls='-.')
+        ax.plot(means_df.ustar, means_df.Fc + means_df.Fc_storage,
+                marker = '^', mfc = '0.5', color = '0.5')
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 def _define_default_internal_names():
 
     return {'flux_name': 'Fc',
+            'storage_name': 'Fc_storage',
             'insolation_name': 'Fsd',
             'friction_velocity_name': 'ustar'}
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-def _rename_df(df, external_names, internal_names):
-    assert sorted(external_names.keys()) == sorted(internal_names.keys())
-    swap_dict = {external_names[key]: internal_names[key]
-                 for key in internal_names.keys()}
-    sub_df = df[swap_dict.keys()].copy()
-    sub_df.columns = swap_dict.values()
-    return sub_df
+def _make_df(path_to_file, external_names):
+
+    ds = xr.open_dataset(path_to_file)
+    ds = ds.sel(latitude=ds.latitude[0], longitude=ds.longitude[0], drop=True)
+    temp_names = _define_default_internal_names()
+    assert all([x in temp_names for x in external_names])
+    temp_names.update(external_names)
+    if not temp_names['storage_name'] in ds.variables:
+        temp_names.pop('storage_name')
+    assert all([temp_names[x] in ds.variables for x in temp_names.keys()])
+    ds = ds[list(temp_names.values())]
+    internal_names = _define_default_internal_names()
+    swap_dict = {temp_names[key]: internal_names[key]
+                 for key in temp_names.keys()}
+    df = ds.to_dataframe()
+    df.index = df.index.drop_duplicates()
+    df.replace(to_replace=-9999, value=np.nan, inplace=True)
+    ds.close()
+    return df.rename(swap_dict, axis=1)
 #------------------------------------------------------------------------------
