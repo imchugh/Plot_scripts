@@ -45,7 +45,7 @@ def plot_ustar(path_to_file, num_cats = 30, vars_dict = None,
     if vars_dict: _rename_df(df, vars_dict, _define_default_internal_names())
 
     # Group by quantile and generate mean
-    noct_df = df.loc[df.Fsd < light_threshold]
+    noct_df = df.loc[df[vars_dict['insolation_name']] < light_threshold]
     noct_df['ustar_cat'] = pd.qcut(df.ustar, num_cats,
                                    labels = np.linspace(1, num_cats, num_cats))
     means_df = noct_df.groupby('ustar_cat').mean()
@@ -62,7 +62,9 @@ def plot_ustar(path_to_file, num_cats = 30, vars_dict = None,
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     if ustar_threshold: ax.axvline(ustar_threshold, color = 'grey')
-    ax.plot(means_df.ustar, means_df.Fc, marker = 'o', mfc = '0.5', color = 'grey')
+    ax.plot(means_df[vars_dict['friction_velocity_name']],
+            means_df[vars_dict['flux_name']],
+            marker = 'o', mfc = '0.5', color = 'grey')
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
