@@ -43,25 +43,28 @@ def plot_ustar(path_to_file, num_cats = 30, vars_dict = None,
     means_df = noct_df.dropna().groupby('ustar_cat').mean()
 
     # Plot
-    fig, ax = plt.subplots(1, figsize = (12, 8))
+    fig, ax1 = plt.subplots(1, figsize = (12, 8))
     fig.patch.set_facecolor('white')
-    ax.set_ylabel(r'$R_e\/(\mu mol\/m^{-2}\/s^{-1})$', fontsize = 22)
-    ax.set_xlabel('$u_{*}\/(m\/s^{-1})$', fontsize = 22)
-    ax.tick_params(axis = 'x', labelsize = 14)
-    ax.tick_params(axis = 'y', labelsize = 14)
-    ax.yaxis.set_ticks_position('left')
-    ax.xaxis.set_ticks_position('bottom')
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    if ustar_threshold: ax.axvline(ustar_threshold, color='black', lw=0.5)
-    ax.plot(means_df.ustar, means_df.Fc, marker='o', mfc='None',
+    ax1.set_ylabel(r'$R_e\/(\mu mol\/m^{-2}\/s^{-1})$', fontsize = 18)
+    ax1.set_xlabel('$u_{*}\/(m\/s^{-1})$', fontsize = 18)
+    ax1.tick_params(axis = 'x', labelsize = 14)
+    ax1.tick_params(axis = 'y', labelsize = 14)
+    ax1.yaxis.set_ticks_position('left')
+    ax1.xaxis.set_ticks_position('bottom')
+    if ustar_threshold: ax1.axvline(ustar_threshold, color='black', lw=0.5)
+    ax1.plot(means_df.ustar, means_df.Fc, marker='o', mfc='None',
             color = 'black', ls=':', label='Turbulent flux')
     if 'Fc_storage' in noct_df.columns:
-        ax.plot(means_df.ustar, means_df.Fc_storage, marker='s', mfc='None',
+        ax1.plot(means_df.ustar, means_df.Fc_storage, marker='s', mfc='None',
                 color = 'black', ls='-.', label='Storage')
-        ax.plot(means_df.ustar, means_df.Fc + means_df.Fc_storage,
+        ax1.plot(means_df.ustar, means_df.Fc + means_df.Fc_storage,
                 marker = '^', mfc = '0.5', color = '0.5', label='Apparent NEE')
-        ax.legend(frameon=False)
+        ax1.legend(frameon=False)
+    ax2 = ax1.twinx()
+    ax2.set_ylim([10,20])
+    ax2.tick_params(axis = 'y', labelsize = 14)
+    ax2.set_ylabel(r'$Temperature\/(^oC)$', fontsize = 18)
+    ax2.plot(means_df.ustar, means_df.Ta)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -70,7 +73,8 @@ def _define_default_internal_names():
     return {'flux_name': 'Fc',
             'storage_name': 'Fc_storage',
             'insolation_name': 'Fsd',
-            'friction_velocity_name': 'ustar'}
+            'friction_velocity_name': 'ustar',
+            'temperature_name': 'Ta'}
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
